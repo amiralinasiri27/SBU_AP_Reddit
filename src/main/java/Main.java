@@ -1,4 +1,6 @@
+import java.util.ArrayList;
 import java.util.Scanner;
+import java.util.SortedMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -17,7 +19,7 @@ public class Main {
     }
 
     public static void runMenu() { // Function for running the program and showing menus
-        DataBase hopeReddit = new DataBase();
+        DataBase hopeReddit = new DataBase(); // a database for saving data while users run program
         Scanner scanner = new Scanner(System.in);
         String userChoiceForFirstMenu;
 
@@ -105,11 +107,23 @@ public class Main {
                     if (itShouldBackToMenuForEmail) {
                         break;
                     }
-
-                    System.out.print("Do You Want to Show Your Email in Your Profile: 1) Yes - 2) No %$#--->: ");
+                    System.out.println();
+                    System.out.print("Do You Want to Show Your Email in Your Profile: 1) Yes - 2) No %$#--->: " + ANSI_RESET);
                     String inputShowEmailInProfile = scanner.nextLine();
                     boolean shoeEmailInProfile = false;
                     if (inputShowEmailInProfile.equals("1")) { shoeEmailInProfile = true; }
+
+                    // Checking Captcha Code
+                    while (true) {
+                        Captcha captcha = new Captcha();
+                        if (captcha.validateCaptcha(scanner) && captcha.getSituation() != 1) {
+                            break;
+                        }
+                        else if (captcha.getSituation() == 1) {
+                            exit();
+                            break;
+                        }
+                    }
 
                     Account newAccount = new Account(inputUsername, inputPassword, inputEmail);
                     newAccount.setEmailDisplayOnProfile(shoeEmailInProfile);
@@ -362,7 +376,8 @@ public class Main {
                     break;
                 case "4": // show All Subreddits that this user follow them (TimeLine) / (Show and Leaving Comments)
                     account.showUserFollowSubreddits();
-                    if (account.getFollowSubreddits().isEmpty()) {
+                    account.showAllFollowingsPosts(); // post of users that account follow them
+                    if (account.getFollowSubreddits().isEmpty() && account.getFollowings().isEmpty()) {
                         break;
                     }
                     showAllSubredditsSubmenu();
@@ -393,13 +408,19 @@ public class Main {
                     // the password of admins not important because they can not log in (if they want they should log in with their account(account object))
                     System.out.print("Enter The Topic Of Subreddit %$#--->: ");
                     String inputTopic = scanner.nextLine();
-                    Subreddit subreddit = new Subreddit(inputTopic, admin);
-                    dataBase.addSubreddit(subreddit);
-                    account.addSubreddit(subreddit);
-                    account.addFollowSubreddit(subreddit);
-                    subreddit.addParticipant(account);
-                    System.out.println(ANSI_GREEN);
-                    System.out.println("Subreddit " + subreddit.getTopic() + " Successfully Created" + ANSI_RESET);
+                    if (dataBase.isSubredditNameNew(inputTopic)) {
+                        Subreddit subreddit = new Subreddit(inputTopic, admin);
+                        dataBase.addSubreddit(subreddit);
+                        account.addSubreddit(subreddit);
+                        account.addFollowSubreddit(subreddit);
+                        subreddit.addParticipant(account);
+                        System.out.println(ANSI_GREEN);
+                        System.out.println("Subreddit " + subreddit.getTopic() + " Successfully Created" + ANSI_RESET);
+                    }
+                    else {
+                        System.out.println(ANSI_RED);
+                        System.out.println("There is a Subreddit With This Topic Please Choose Another Topic Name" + ANSI_RESET);
+                    }
                     break;
                 case "7": // add admin to a Subreddit
                     if (account.getSubreddits().isEmpty()) {
@@ -427,12 +448,12 @@ public class Main {
                                     adminAccount.addFollowSubreddit(subreddit1); // follow it
                                     System.out.println(ANSI_GREEN);
                                     System.out.println(adminAccount.getUsername() + " Successfully add to admins of " + subreddit1.getTopic() + ANSI_RESET);
-                                    break;
+//                                    break;
                                 }
                                 else {
                                     System.out.println(ANSI_RED);
                                     System.out.println("User does not Exist!!!" + ANSI_RESET);
-                                    break;
+//                                    break;
                                 }
                             }
                         }
@@ -458,22 +479,28 @@ public class Main {
                             String newPostContent;
                             System.out.print("Enter The Title Of New Post %$#--->: ");
                             newPostTitle = scanner.nextLine();
-                            System.out.print("Enter The Content Of New Post %$#--->: ");
-                            newPostContent = scanner.nextLine();
-                            Post post = new Post(account, newPostTitle, newPostContent);
-                            System.out.print("If You Want Enter a Tag (0 for back to menu) %$#--->: ");
-                            String inputTags = scanner.nextLine();
-                            if (!inputTags.equals("0")) { post.addTag(inputTags); }
-                            while (!inputTags.equals("0")) {
+                            if (dataBase.isPostNameNew(newPostTitle)) {
+                                System.out.print("Enter The Content Of New Post %$#--->: ");
+                                newPostContent = scanner.nextLine();
+                                Post post = new Post(account, newPostTitle, newPostContent);
                                 System.out.print("If You Want Enter a Tag (0 for back to menu) %$#--->: ");
-                                inputTags = scanner.nextLine();
+                                String inputTags = scanner.nextLine();
                                 if (!inputTags.equals("0")) { post.addTag(inputTags); }
+                                while (!inputTags.equals("0")) {
+                                    System.out.print("If You Want Enter a Tag (0 for back to menu) %$#--->: ");
+                                    inputTags = scanner.nextLine();
+                                    if (!inputTags.equals("0")) { post.addTag(inputTags); }
+                                }
+                                subreddit1.addPost(post);
+                                account.addPost(post);
+                                post.setSubreddit(subreddit1);
+                                System.out.println(ANSI_GREEN);
+                                System.out.println("Post " + post.getTitle() + " in Subreddit " + subreddit1.getTopic() + " Successfully Created" + ANSI_RESET);
                             }
-                            subreddit1.addPost(post);
-                            account.addPost(post);
-                            post.setSubreddit(subreddit1);
-                            System.out.println(ANSI_GREEN);
-                            System.out.println("Post " + post.getTitle() + " in Subreddit " + subreddit1.getTopic() + " Successfully Created" + ANSI_RESET);
+                            else {
+                                System.out.println(ANSI_RED);
+                                System.out.println("There is a Post With This Title Please Choose Another Name" + ANSI_RESET);
+                            }
                         }
                     }
                     if (!isInputTrue) {
@@ -485,8 +512,12 @@ public class Main {
                     String inputName = scanner.nextLine();
                     int foundUserAndSubreddit = dataBase.searchByName(inputName);
                     if (foundUserAndSubreddit == 2) { // subreddit found
-                        Subreddit searchedSubreddit = dataBase.getSubredditByName(inputName);
-                        searchedSubreddit.showAllPosts();
+                        ArrayList<Subreddit> searchedSubreddit = dataBase.getSubredditByName(inputName);
+                        if (!searchedSubreddit.isEmpty()) {
+                            for (Subreddit subreddit1 : searchedSubreddit) {
+                                subreddit1.showAllPosts();
+                            }
+                        }
                     }
                     if (foundUserAndSubreddit == 3) { // user found
                         Account searchedAccount = dataBase.getAccountByUsername(inputName);
@@ -500,8 +531,12 @@ public class Main {
                             searchedAccount.showUserProfile();
                         }
                         else if (inputWhat.equals("2")) {
-                            Subreddit searchedSubreddit = dataBase.getSubredditByName(inputName);
-                            searchedSubreddit.showAllPosts();
+                            ArrayList<Subreddit> searchedSubreddit = dataBase.getSubredditByName(inputName);
+                            if (!searchedSubreddit.isEmpty()) {
+                                for (Subreddit subreddit1 : searchedSubreddit) {
+                                    subreddit1.showAllPosts();
+                                }
+                            }
                         }
                         else {
                             displayInvalidOrderError();
@@ -584,12 +619,25 @@ public class Main {
                     account.showAllVotes();
                     changeVote(account);
                     break;
-                case "13": // Logout
+                case "13": // Show All ChatBoxes
+                    account.showAllChatBoxes(dataBase, scanner);
+                    break;
+                case "14": // Follow a user
+                    account.followUsers(dataBase, scanner);
+                    break;
+                case "15": // UnSave a Post
+                    System.out.print("Enter Title of Post You Want To UnSave It (0 For Back To Menu) %$#--->: ");
+                    String title = scanner.nextLine();
+                    if (!title.equals("0")) {
+                        account.unSavePost(title);
+                    }
+                    break;
+                case "16": // Logout
                     System.out.println(ANSI_GREEN);
                     System.out.println("Log out successfully");
                     wantToLogOut = true;
                     break;
-                case "14": // Exit Program
+                case "17": // Exit Program
                     exit();
                     break;
                 default:
@@ -617,6 +665,14 @@ public class Main {
                 if (!subreddit.getPosts().isEmpty()) {
                     isAnyPostInDataBase = true;
                     break;
+                }
+            }
+            if (!isAnyPostInDataBase) {
+                for (Account account1 : account.getFollowings()) {
+                    if (!account1.getPosts().isEmpty()) {
+                        isAnyPostInDataBase = true;
+                        break;
+                    }
                 }
             }
         }
@@ -672,6 +728,14 @@ public class Main {
                     break;
                 }
             }
+            if (!isAnyPostInDataBase) {
+                for (Account account1 : account.getFollowings()) {
+                    if (!account1.getPosts().isEmpty()) {
+                        isAnyPostInDataBase = true;
+                        break;
+                    }
+                }
+            }
         }
 
         if (isAnyPostInDataBase) {
@@ -722,6 +786,14 @@ public class Main {
                 if (!subreddit.getPosts().isEmpty()) {
                     isAnyPostInDataBase = true;
                     break;
+                }
+            }
+            if (!isAnyPostInDataBase) {
+                for (Account account1 : account.getFollowings()) {
+                    if (!account1.getPosts().isEmpty()) {
+                        isAnyPostInDataBase = true;
+                        break;
+                    }
                 }
             }
         }
@@ -845,7 +917,7 @@ public class Main {
                                 }
                             }
 
-                            break;
+//                            break;
                         }
                     }
                 }
@@ -918,13 +990,13 @@ public class Main {
                                             System.out.println("Retract Was Successfully Applied You Can Vote To This Post Later" + ANSI_RESET);
                                         }
                                         break;
-                                    case "0": // Back To M
+                                    case "0": // Back To Menu
                                         break;
                                     default:
                                         displayInvalidOrderError();
                                         break;
                                 }
-                                break;
+//                                break;
                             }
                         }
                         if (!isPostFound) {

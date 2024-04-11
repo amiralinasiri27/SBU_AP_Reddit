@@ -61,6 +61,26 @@ public class DataBase {
         return false;
     }
 
+    public boolean isSubredditNameNew(String name) {
+        for (Subreddit subreddit : this.subreddits) {
+            if (subreddit.getTopic().equals(name)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public boolean isPostNameNew(String name) {
+        for (Subreddit subreddit : this.subreddits) {
+            for (Post post : subreddit.getPosts()) {
+                if (post.getTitle().equals(name)) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
     public void viewAllSubreddits() {
         if (!this.subreddits.isEmpty()) {
             for (Subreddit subreddit : this.subreddits) {
@@ -83,13 +103,14 @@ public class DataBase {
         }
     }
 
-    public Subreddit getSubredditByName(String subredditName) {
+    public ArrayList<Subreddit> getSubredditByName(String subredditName) {
+        ArrayList<Subreddit> subreddits1 = new ArrayList<>();
         for (Subreddit subreddit : this.subreddits) {
             if (subreddit.getTopic().equals(subredditName)) {
-                return subreddit;
+                subreddits1.add(subreddit);
             }
         }
-        return null;
+        return subreddits1;
     }
 
     public Account getAccountByUsername(String username) {
@@ -139,5 +160,17 @@ public class DataBase {
         else {
             return 1;
         }
+    }
+
+    public ArrayList<Post> foundPostByTitle(String title) {
+        ArrayList<Post> foundPosts = new ArrayList<>();
+        for (Subreddit subreddit : this.subreddits) {
+            for (Post post : subreddit.getPosts()) {
+                if (post.getTitle().equals(title)) {
+                    foundPosts.add(post);
+                }
+            }
+        }
+        return foundPosts;
     }
 }
